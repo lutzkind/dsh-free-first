@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2 — 2026-10-23
+
+- Honor `respectExplicitModelSelection: false` explicitly; the default remains
+  true, so an explicit paid or unrelated model still stops management.
+
 ## 0.1.1 — 2026-10-23
 
 - Default the free route to `opencode-go/beam-free`, a zero-cost OpenCode Go

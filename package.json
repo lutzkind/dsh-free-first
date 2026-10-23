@@ -1,6 +1,6 @@
 {
   "name": "@lutzkind/dsh-free-first",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "DeepSeek Harness native free-route preference, conservative failover, and recovery.",
   "author": "Lutz Kind",
   "license": "MIT",

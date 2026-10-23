@@ -17,8 +17,8 @@ The governing rule:
 ## Install
 
 ```sh
-dsh plugin --profile web add git+https://github.com/lutzkind/dsh-free-first.git#v0.1.1
-dsh plugin --profile headless add git+https://github.com/lutzkind/dsh-free-first.git#v0.1.1
+dsh plugin --profile web add git+https://github.com/lutzkind/dsh-free-first.git#v0.1.2
+dsh plugin --profile headless add git+https://github.com/lutzkind/dsh-free-first.git#v0.1.2
 ```
 
 Mount it after `@lutzkind/dsh-offpeak`:

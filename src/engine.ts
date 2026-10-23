@@ -104,11 +104,13 @@ export class FreeFirstEngine {
 
   /** Whether this session is owned by free-first rather than an explicit user route. */
   isManaged(session: SessionView): boolean {
-    const explicit = this.explicitSelection(session)
-    if (explicit !== undefined) {
-      if (sameRoute(explicit, this.config.free)) return true
-      if (sameRoute(explicit, this.config.fallback)) return false
-      return false
+    if (this.config.respectExplicitModelSelection) {
+      const explicit = this.explicitSelection(session)
+      if (explicit !== undefined) {
+        if (sameRoute(explicit, this.config.free)) return true
+        if (sameRoute(explicit, this.config.fallback)) return false
+        return false
+      }
     }
     const header = session.requestHeader?.()?.config
     if (header === undefined) return this.config.preferAsDefault
