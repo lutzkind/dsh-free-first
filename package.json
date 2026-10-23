@@ -1,0 +1,62 @@
+{
+  "name": "@lutzkind/dsh-free-first",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness native free-route preference, conservative failover, and recovery.",
+  "author": "Lutz Kind",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./classify": {
+      "types": "./dist/classify.d.ts",
+      "default": "./dist/classify.js"
+    },
+    "./health": {
+      "types": "./dist/health.d.ts",
+      "default": "./dist/health.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "ARCHITECTURE.md",
+    "AGENTS.md",
+    "DECISIONS.md",
+    "ROADMAP.md"
+  ],
+  "engines": {
+    "node": ">=22.19"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "check": "npm run typecheck && npm test",
+    "pack:check": "npm pack --dry-run"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "free-tier",
+    "rate-limit",
+    "model-failover",
+    "opencode-zen"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lutzkind/dsh-free-first.git"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}
