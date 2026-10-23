@@ -10,7 +10,7 @@ Status: released `v0.1.2`, installed in the live host profiles `web` and `headle
   same-step retry, `session/event` free-success recovery.
 - Tests: `npm run check` (classifier, health, engine, plugin wiring; no
   provider traffic).
-- Release: `v0.1.2`; installed in `/root/.dsh/profiles/{web,headless}` from the tag,
+- Release: `v0.1.2`; installed in `/root/.dsh/profiles/{web,headless,acp,sdk}` from the tag,
   with rows in each profile patch after `dsh-offpeak`. The installed
   `dist/index.js` sha256 matches the tag.
 - Host verification: `python3 /root/scripts/dsh_verify.py --live`,
