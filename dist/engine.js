@@ -1,6 +1,15 @@
-/** Free-first routing: health, one-probe recovery, managed sessions, and waits. */
+/** Free-first routing: health, one-probe recovery, managed sessions, modes, and waits. */
 import { classifyFailure } from './classify.js';
 import { applyFailure, claimProbe, cooldownExpired, freeRouteUsable, markHealthy, releaseProbe, } from './health.js';
+import { isFreeUsageMode } from './mode.js';
+/**
+ * The only provider this plugin may route. Direct DeepSeek (`deepseek`) and
+ * every unrelated provider stay on normal native Harness routing.
+ */
+export const MANAGED_PROVIDER = 'opencode-go';
+function sameProvider(left, provider) {
+    return left.provider.toLowerCase() === provider.toLowerCase();
+}
 function sameRoute(left, right) {
     return left !== undefined && left.provider === right.provider && left.model === right.model;
 }
@@ -15,21 +24,57 @@ function abortError(signal) {
 /** One process-local free-route controller. */
 export class FreeFirstEngine {
     store;
+    modeStore;
     config;
     now;
     setTimer;
     clearTimer;
     waiters = new Set();
+    currentMode;
+    modeOverride = false;
     disposed = false;
     constructor(options) {
         this.store = options.store;
+        this.modeStore = options.modeStore;
         this.config = options.config;
+        this.currentMode = options.config.mode;
         this.now = options.now ?? Date.now;
         this.setTimer = options.setTimer ?? setTimeout;
         this.clearTimer = options.clearTimer ?? clearTimeout;
     }
     async load() {
         await this.store.load();
+        const saved = await this.modeStore.load();
+        if (saved !== undefined) {
+            this.currentMode = saved;
+            this.modeOverride = true;
+        }
+    }
+    /** Effective free-usage mode: saved override wins over configuration. */
+    get mode() {
+        return this.currentMode;
+    }
+    get configuredMode() {
+        return this.config.mode;
+    }
+    get modeSource() {
+        return this.modeOverride ? 'override' : 'config';
+    }
+    /** Persist an explicit operator mode choice; it survives sessions and restarts. */
+    async setMode(mode) {
+        if (!isFreeUsageMode(mode))
+            throw new Error(`dsh-free-first: invalid mode "${String(mode)}"`);
+        await this.modeStore.save(mode, this.now());
+        this.currentMode = mode;
+        this.modeOverride = true;
+        this.wakeWaiters();
+    }
+    /** Forget the saved choice and return to the configured default mode. */
+    async clearModeOverride() {
+        await this.modeStore.clear();
+        this.currentMode = this.config.mode;
+        this.modeOverride = false;
+        this.wakeWaiters();
     }
     health() {
         return this.store.current().health;
@@ -53,10 +98,16 @@ export class FreeFirstEngine {
         return latest;
     }
     /** Whether this session is owned by free-first rather than an explicit user route. */
-    isManaged(session) {
+    isManaged(session, current) {
+        if (this.currentMode === 'disabled')
+            return false;
+        if (current !== undefined && !sameProvider(current, MANAGED_PROVIDER))
+            return false;
         if (this.config.respectExplicitModelSelection) {
             const explicit = this.explicitSelection(session);
             if (explicit !== undefined) {
+                if (!sameProvider(explicit, MANAGED_PROVIDER))
+                    return false;
                 if (sameRoute(explicit, this.config.free))
                     return true;
                 if (sameRoute(explicit, this.config.fallback))
@@ -67,6 +118,8 @@ export class FreeFirstEngine {
         const header = session.requestHeader?.()?.config;
         if (header === undefined)
             return this.config.preferAsDefault;
+        if (!sameProvider(header, MANAGED_PROVIDER))
+            return false;
         if (sameRoute(header, this.config.free))
             return true;
         if (sameRoute(header, this.config.fallback)) {
@@ -75,13 +128,23 @@ export class FreeFirstEngine {
         return false;
     }
     /**
-     * Resolve the route for one request. A managed session uses the free route
-     * when healthy or when it wins the single post-cooldown probe lease; every
-     * other managed request uses the paid fallback.
+     * Resolve the route for one request. Only an OpenCode Go route can be
+     * managed. A managed session uses the free route when the mode allows it and
+     * health says it is usable, or when it wins the single post-cooldown probe;
+     * every other managed request uses the paid OpenCode Go fallback.
+     *
+     * `peakActive` is the canonical PEAK answer from dsh-offpeak and is only
+     * consulted in `peak-only` mode. Missing or non-PEAK answers are false.
      */
-    async selectRoute(session, current) {
-        if (!this.isManaged(session)) {
+    async selectRoute(session, current, peakActive = false) {
+        if (!sameProvider(current, MANAGED_PROVIDER)) {
+            return { route: current, managed: false, reason: 'provider-outside-opencode-go' };
+        }
+        if (!this.isManaged(session, current)) {
             return { route: current, managed: false, reason: 'explicit-or-unrelated-route' };
+        }
+        if (this.currentMode === 'peak-only' && !peakActive) {
+            return { route: this.config.fallback, managed: true, reason: 'peak-only-not-peak' };
         }
         const now = this.now();
         const health = this.health();

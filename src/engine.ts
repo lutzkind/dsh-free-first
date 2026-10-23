@@ -1,4 +1,4 @@
-/** Free-first routing: health, one-probe recovery, managed sessions, and waits. */
+/** Free-first routing: health, one-probe recovery, managed sessions, modes, and waits. */
 
 import { classifyFailure, type FailureView } from './classify.js'
 import {
@@ -11,7 +11,14 @@ import {
   type HealthOptions,
   type HealthRecord,
 } from './health.js'
+import { isFreeUsageMode, type FreeUsageMode, type ModeStore } from './mode.js'
 import type { FreeFirstState, FreeFirstStateStore } from './state.js'
+
+/**
+ * The only provider this plugin may route. Direct DeepSeek (`deepseek`) and
+ * every unrelated provider stay on normal native Harness routing.
+ */
+export const MANAGED_PROVIDER = 'opencode-go'
 
 export interface Route {
   provider: string
@@ -24,6 +31,7 @@ export interface EngineConfig extends HealthOptions {
   preferAsDefault: boolean
   respectExplicitModelSelection: boolean
   reasoningEffort?: string
+  mode: FreeUsageMode
 }
 
 export interface SessionView {
@@ -40,10 +48,15 @@ export interface SelectionResult {
 
 export interface FreeFirstEngineOptions {
   store: FreeFirstStateStore
+  modeStore: ModeStore
   config: EngineConfig
   now?: () => number
   setTimer?: (callback: () => void, delayMs: number) => ReturnType<typeof setTimeout>
   clearTimer?: (timer: ReturnType<typeof setTimeout>) => void
+}
+
+function sameProvider(left: Route, provider: string): boolean {
+  return left.provider.toLowerCase() === provider.toLowerCase()
 }
 
 function sameRoute(left: Route | undefined, right: Route): boolean {
@@ -61,16 +74,21 @@ function abortError(signal?: AbortSignal): Error {
 /** One process-local free-route controller. */
 export class FreeFirstEngine {
   private readonly store: FreeFirstStateStore
+  private readonly modeStore: ModeStore
   readonly config: EngineConfig
   private readonly now: () => number
   private readonly setTimer: NonNullable<FreeFirstEngineOptions['setTimer']>
   private readonly clearTimer: NonNullable<FreeFirstEngineOptions['clearTimer']>
   private readonly waiters = new Set<() => void>()
+  private currentMode: FreeUsageMode
+  private modeOverride = false
   private disposed = false
 
   constructor(options: FreeFirstEngineOptions) {
     this.store = options.store
+    this.modeStore = options.modeStore
     this.config = options.config
+    this.currentMode = options.config.mode
     this.now = options.now ?? Date.now
     this.setTimer = options.setTimer ?? setTimeout
     this.clearTimer = options.clearTimer ?? clearTimeout
@@ -78,6 +96,41 @@ export class FreeFirstEngine {
 
   async load(): Promise<void> {
     await this.store.load()
+    const saved = await this.modeStore.load()
+    if (saved !== undefined) {
+      this.currentMode = saved
+      this.modeOverride = true
+    }
+  }
+
+  /** Effective free-usage mode: saved override wins over configuration. */
+  get mode(): FreeUsageMode {
+    return this.currentMode
+  }
+
+  get configuredMode(): FreeUsageMode {
+    return this.config.mode
+  }
+
+  get modeSource(): 'override' | 'config' {
+    return this.modeOverride ? 'override' : 'config'
+  }
+
+  /** Persist an explicit operator mode choice; it survives sessions and restarts. */
+  async setMode(mode: FreeUsageMode): Promise<void> {
+    if (!isFreeUsageMode(mode)) throw new Error(`dsh-free-first: invalid mode "${String(mode)}"`)
+    await this.modeStore.save(mode, this.now())
+    this.currentMode = mode
+    this.modeOverride = true
+    this.wakeWaiters()
+  }
+
+  /** Forget the saved choice and return to the configured default mode. */
+  async clearModeOverride(): Promise<void> {
+    await this.modeStore.clear()
+    this.currentMode = this.config.mode
+    this.modeOverride = false
+    this.wakeWaiters()
   }
 
   health(): HealthRecord {
@@ -103,10 +156,13 @@ export class FreeFirstEngine {
   }
 
   /** Whether this session is owned by free-first rather than an explicit user route. */
-  isManaged(session: SessionView): boolean {
+  isManaged(session: SessionView, current?: Route): boolean {
+    if (this.currentMode === 'disabled') return false
+    if (current !== undefined && !sameProvider(current, MANAGED_PROVIDER)) return false
     if (this.config.respectExplicitModelSelection) {
       const explicit = this.explicitSelection(session)
       if (explicit !== undefined) {
+        if (!sameProvider(explicit, MANAGED_PROVIDER)) return false
         if (sameRoute(explicit, this.config.free)) return true
         if (sameRoute(explicit, this.config.fallback)) return false
         return false
@@ -114,6 +170,7 @@ export class FreeFirstEngine {
     }
     const header = session.requestHeader?.()?.config
     if (header === undefined) return this.config.preferAsDefault
+    if (!sameProvider(header, MANAGED_PROVIDER)) return false
     if (sameRoute(header, this.config.free)) return true
     if (sameRoute(header, this.config.fallback)) {
       return this.store.current().sessions[session.id]?.managed === true
@@ -122,13 +179,23 @@ export class FreeFirstEngine {
   }
 
   /**
-   * Resolve the route for one request. A managed session uses the free route
-   * when healthy or when it wins the single post-cooldown probe lease; every
-   * other managed request uses the paid fallback.
+   * Resolve the route for one request. Only an OpenCode Go route can be
+   * managed. A managed session uses the free route when the mode allows it and
+   * health says it is usable, or when it wins the single post-cooldown probe;
+   * every other managed request uses the paid OpenCode Go fallback.
+   *
+   * `peakActive` is the canonical PEAK answer from dsh-offpeak and is only
+   * consulted in `peak-only` mode. Missing or non-PEAK answers are false.
    */
-  async selectRoute(session: SessionView, current: Route): Promise<SelectionResult> {
-    if (!this.isManaged(session)) {
+  async selectRoute(session: SessionView, current: Route, peakActive = false): Promise<SelectionResult> {
+    if (!sameProvider(current, MANAGED_PROVIDER)) {
+      return { route: current, managed: false, reason: 'provider-outside-opencode-go' }
+    }
+    if (!this.isManaged(session, current)) {
       return { route: current, managed: false, reason: 'explicit-or-unrelated-route' }
+    }
+    if (this.currentMode === 'peak-only' && !peakActive) {
+      return { route: this.config.fallback, managed: true, reason: 'peak-only-not-peak' }
     }
     const now = this.now()
     const health = this.health()
