@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.0 — 2026-10-23
+
+- **Breaking scope change:** manages `opencode-go` only. Both configured routes
+  must be `opencode-go`, and every other provider — including the direct
+  DeepSeek API — passes through untouched with its real errors.
+- Add persistent free usage modes with precedence saved choice > configured
+  `mode` > `free-first`:
+  - `free-first` prefers free whenever healthy;
+  - `peak-only` uses free only on a positive `PEAK` answer from `dsh-offpeak`;
+  - `disabled` removes free-first routing and leaves `dsh-offpeak` unchanged;
+  - `mode configured` clears the saved override.
+- Store the mode in a separate atomic `mode.json`; health writes cannot clobber
+  it.
+- Add `/free-first mode <...>` and mode details in `/free-first status`.
+- No automatic cross-provider fallback in either direction.
+
 ## 0.1.2 — 2026-10-23
 
 - Honor `respectExplicitModelSelection: false` explicitly; the default remains

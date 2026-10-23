@@ -1,7 +1,7 @@
 {
   "name": "@lutzkind/dsh-free-first",
-  "version": "0.1.2",
-  "description": "DeepSeek Harness native free-route preference, conservative failover, and recovery.",
+  "version": "0.2.0",
+  "description": "DeepSeek Harness native OpenCode Go free-route preference, modes, conservative failover, and recovery.",
   "author": "Lutz Kind",
   "license": "MIT",
   "type": "module",
@@ -19,6 +19,10 @@
     "./health": {
       "types": "./dist/health.d.ts",
       "default": "./dist/health.js"
+    },
+    "./mode": {
+      "types": "./dist/mode.d.ts",
+      "default": "./dist/mode.js"
     },
     "./package.json": "./package.json"
   },

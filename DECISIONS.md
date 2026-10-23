@@ -1,5 +1,35 @@
 # Decisions
 
+## 2026-10-23 — OpenCode Go is the only managed provider
+
+Free-first manages `opencode-go` and nothing else. Configuration rejects any
+other provider for either route and both waterfalls short-circuit before
+evaluation. Direct DeepSeek is an independently configured, manually selected
+provider: it is never rewritten, never failed over to, and never shares health
+state with OpenCode Go. This is a structural boundary, not a runtime toggle.
+
+## 2026-10-23 — Three persistent usage modes, saved choice wins
+
+`free-first`, `peak-only`, and `disabled` are routing policies layered on top
+of availability. Precedence is saved override > configured mode > `free-first`.
+The override lives in its own atomic `mode.json`, separate from health, so
+neither document can clobber the other. `mode configured` deletes the override
+and restores the configured default. No new database or service is introduced.
+
+## 2026-10-23 — `peak-only` consumes one canonical pricing answer
+
+Peak Only asks `ctx.offpeak.evaluate()` about the paid OpenCode Go fallback. It
+never copies the weekly windows, holidays, or a second clock. Only a positive
+`PEAK` state qualifies; `OFF_PEAK`, `FLAT`, `UNTRACKED`, `UNKNOWN`, a missing
+service, and a failed call are all not-PEAK, so free quota cannot be spent by
+accident.
+
+## 2026-10-23 — `disabled` affects free-first only
+
+Disabling free-first removes route selection, failover, recovery, probes, and
+waits, and lets normal DSH routing apply. It does not touch `dsh-offpeak`, its
+holds, or the session's chosen model.
+
 ## 2026-10-23 — Use `agent/request` and `agent/request-error`
 
 The Harness already re-runs a failed step inside the same open turn. Free-first

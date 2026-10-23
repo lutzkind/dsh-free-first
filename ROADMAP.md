@@ -2,12 +2,16 @@
 
 ## Current
 
+- OpenCode Go-only provider boundary; direct DeepSeek always bypasses.
+- Persistent free usage modes: `free-first`, `peak-only`, `disabled`, and
+  `configured` reset.
 - Free-route preference with explicit-selection respect.
 - Conservative rate-limit, quota, provenance-gate, and transient failover.
-- Same-step retry on the paid fallback.
+- Same-step retry on the paid OpenCode Go fallback.
 - Shared bounded cooldown with one recovery probe lease.
-- Off-peak cooperation through `ctx.offpeak`.
-- `/free-first` status and reset.
+- Off-peak cooperation through `ctx.offpeak`; Peak Only consumes its canonical
+  PEAK answer.
+- `/free-first` status, mode, and reset commands.
 
 ## Next
 
@@ -19,6 +23,7 @@
 ## Explicitly out of scope
 
 - Pricing windows or holiday calendars.
+- Cross-provider fallback, including OpenCode Go to direct DeepSeek.
 - An HTTP proxy or header injection.
 - Background health probes or cache warming.
 - A queue, daemon, database, or second agent runtime.
