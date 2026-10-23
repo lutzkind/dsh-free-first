@@ -2,7 +2,8 @@
 
 ## Current
 
-- OpenCode Go-only provider boundary; direct DeepSeek always bypasses.
+- OpenCode Go-only provider boundary for free-first; direct DeepSeek always
+  bypasses it (dsh-offpeak manages Direct pricing separately).
 - Persistent free usage modes: `free-first`, `peak-only`, `disabled`, and
   `configured` reset.
 - Free-route preference with explicit-selection respect.

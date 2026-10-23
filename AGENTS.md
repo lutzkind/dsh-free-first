@@ -34,8 +34,9 @@ npm pack --dry-run
 ## Invariants
 
 - Fallback only for positively identified temporary free-route failures.
-- Only `opencode-go` is managed. Direct DeepSeek and any other provider must
-  pass through untouched; never add cross-provider fallback.
+- Only `opencode-go` is managed by free-first. Direct DeepSeek and any other
+  provider must pass through untouched; never add cross-provider fallback.
+  `dsh-offpeak` may manage Direct pricing independently.
 - Never fall back for auth, invalid request/model, context, tool, content,
   plugin, abort, or unknown failures.
 - Retry the same step and session; never resend a prompt or replay a completed

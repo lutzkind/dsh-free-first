@@ -21,14 +21,19 @@ This plugin manages one provider: `opencode-go`.
 ```text
 opencode-go/beam-free                  -> managed free route
 opencode-go/deepseek-v4.1-flash        -> managed paid fallback
-deepseek/... (direct DeepSeek API)     -> unmanaged, normal Harness routing
-any other provider                     -> unmanaged, normal Harness routing
+deepseek/... (direct DeepSeek API)     -> unmanaged by free-first; dsh-offpeak still guards it
+any other provider                     -> unmanaged by free-first, normal Harness routing
 ```
 
 `free.provider` and `fallback.provider` must both be `opencode-go`; the plugin
 rejects any other configuration. A direct DeepSeek request, failure, or 429/5xx
 never triggers OpenCode Go fallback, and an OpenCode Go failure never falls
 through to the direct API. There is no automatic cross-provider routing.
+
+`@lutzkind/dsh-offpeak` independently manages the Direct API's verified pricing
+window. A manually selected Direct request may therefore be held by off-peak,
+but free-first never sees it, never probes it, and never keeps health state for
+it.
 
 ## Install
 
@@ -117,6 +122,10 @@ If off-peak is not mounted, `peak-only` treats pricing as not-PEAK and
 free-first falls back to paid immediately. Neither plugin implements the
 other's policy.
 
+A direct DeepSeek request never reaches this interaction: free-first bypasses it
+before pricing, health, timers, or routing. `dsh-offpeak` may still hold that
+request under the separate Direct API policy.
+
 ## Commands
 
 ```text
@@ -155,6 +164,8 @@ loses nor duplicates them. No database, queue, or scheduler.
 - There is no out-of-band health probe: the first real request after a cooldown
   is the probe.
 - Direct DeepSeek is manual/explicit only. No cross-provider fallback exists.
+  Free-first bypasses it completely; `dsh-offpeak` may hold it under the
+  separate Direct API policy.
 
 ## Development
 

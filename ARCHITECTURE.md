@@ -27,12 +27,17 @@ waterfalls return before touching health, timers, or `ctx.offpeak` for any other
 provider. Consequently:
 
 - a direct DeepSeek (`deepseek/...`) request is never rewritten, waited on, or
-  failed over;
-- a direct DeepSeek 429/5xx/auth failure surfaces unchanged;
+  failed over by free-first;
+- a direct DeepSeek 429/5xx/auth failure surfaces unchanged through free-first;
 - an OpenCode Go failure always retries on the configured OpenCode Go fallback,
   never on the direct provider;
 - no health, cooldown, probe, or session-management state is shared across the
   provider boundary.
+
+`dsh-offpeak` independently evaluates and may hold a Direct request under its
+own verified Direct API policy. That is a separate plugin, separate policy, and
+separate state; free-first never asks about `deepseek/...` and never observes
+that hold.
 
 ## Route selection
 

@@ -1,12 +1,16 @@
 # Decisions
 
-## 2026-10-23 — OpenCode Go is the only managed provider
+## 2026-10-23 — Free-first manages OpenCode Go only
 
 Free-first manages `opencode-go` and nothing else. Configuration rejects any
 other provider for either route and both waterfalls short-circuit before
 evaluation. Direct DeepSeek is an independently configured, manually selected
 provider: it is never rewritten, never failed over to, and never shares health
 state with OpenCode Go. This is a structural boundary, not a runtime toggle.
+
+`@lutzkind/dsh-offpeak` separately manages the Direct API's pricing window. That
+does not widen free-first's boundary: free-first never asks about `deepseek/...`
+and never observes or influences the off-peak hold.
 
 ## 2026-10-23 — Three persistent usage modes, saved choice wins
 

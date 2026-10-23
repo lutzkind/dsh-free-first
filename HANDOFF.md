@@ -6,9 +6,11 @@ Status: released `v0.2.0`, installed in the live host profiles `web`, `headless`
 
 - Source: this repository.
 - Runtime: DeepSeek Harness 0.2.1-rc.2 on Node 24.
-- Provider boundary: only `opencode-go` is managed. `deepseek/...` and every
-  other provider pass through without route selection, pricing, holds, or
-  failover. Config rejects any other provider for `free` or `fallback`.
+- Provider boundary: only `opencode-go` is managed by free-first. `deepseek/...`
+  and every other provider pass through free-first without route selection,
+  pricing calls, holds, or failover. `dsh-offpeak` manages Direct API pricing
+  independently; free-first never observes it. Config rejects any other provider
+  for `free` or `fallback`.
 - Modes: `free-first` (default), `peak-only`, `disabled`, plus
   `mode configured` to clear the saved override. Precedence is saved override >
   configured mode > `free-first`.
