@@ -64,7 +64,7 @@ function validateConfig(value) {
         throw new Error('dsh-free-first: jitterRatio must be between 0 and 1');
     }
     return {
-        free: route(config.free ?? { provider: 'opencode', model: 'deepseek-v4.1-flash-free' }, 'free'),
+        free: route(config.free ?? { provider: 'opencode-go', model: 'beam-free' }, 'free'),
         fallback: route(config.fallback ?? { provider: 'opencode-go', model: 'deepseek-v4.1-flash' }, 'fallback'),
         preferAsDefault: config.preferAsDefault ?? true,
         respectExplicitModelSelection: config.respectExplicitModelSelection ?? true,

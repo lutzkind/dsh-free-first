@@ -31,7 +31,7 @@ Mount it after `@lutzkind/dsh-offpeak`:
     - id: dsh-free-first
       name: '@lutzkind/dsh-free-first'
       config:
-        free: { provider: opencode, model: deepseek-v4.1-flash-free }
+        free: { provider: opencode-go, model: beam-free }
         fallback: { provider: opencode-go, model: deepseek-v4.1-flash }
         preferAsDefault: true
         reasoningEffort: max
@@ -42,7 +42,10 @@ environment variable. This package holds no credential of its own.
 
 ## Behaviour
 
-- New managed sessions start on the free route when it is healthy.
+- New managed sessions start on the free route when it is healthy. The shipped
+  default is `opencode-go/beam-free`: it is a zero-cost model on the same
+  OpenCode Go subscription, so it is not subject to the Zen free-tier
+  provenance gate that refuses non-OpenCode clients.
 - A genuine `RATE_LIMIT` / HTTP 429 / `QUOTA`, the exact OpenCode free-tier
   provenance gate, HTTP 500/502/503/504, `SERVER`, `TIMEOUT`, or `TRANSPORT`
   failure arms a shared bounded cooldown and retries the **same step** on the
