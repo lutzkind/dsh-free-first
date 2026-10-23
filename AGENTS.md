@@ -1,9 +1,25 @@
 # AGENTS.md — dsh-free-first
 
+## Start here
+
+Read `README.md`, `ARCHITECTURE.md`, `DECISIONS.md`, `ROADMAP.md`, and the latest
+`HANDOFF.md` before changing behavior. A local checkout is not proof of
+`origin/main`: run `git status -sb` and inspect `git log -1`; deployed
+production is the live DeepSeek Harness profile described in `HANDOFF.md`.
+The host repository map is `/root/REPO_MAP.md`.
+
 ## What this repo is
 
 A DeepSeek Harness native plugin package. It owns free-route availability only.
 It does not implement off-peak windows, a proxy, a scheduler, or a queue.
+
+## Production
+
+The live integration is the DeepSeek Harness host at `/root/.dsh`, with the
+guarded launcher `/root/cli-persistence/bin/dsh` and this package pinned in
+`/root/.dsh/profiles/{headless,web}/package.json` to a release tag. Verify with
+`python3 /root/scripts/dsh_verify.py --live` and
+`node /root/scripts/dsh_verify_runtime.mjs`; see `HANDOFF.md`.
 
 ## Commands
 
