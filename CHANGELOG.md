@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 — 2026-10-23
+
+- Default the free route to `opencode-go/beam-free`, a zero-cost OpenCode Go
+  model usable by DSH. The Zen `deepseek-v4.1-flash-free` route remains
+  supported but is refused by OpenCode's provenance gate outside OpenCode.
+
 ## 0.1.0 — 2026-10-23
 
 - First DeepSeek Harness native release.
